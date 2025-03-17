@@ -50,6 +50,7 @@ export function FileList() {
     }
   }
 
+  
   useEffect(() => {
     fetchFiles()
   }, [])
@@ -144,21 +145,34 @@ export function FileList() {
                 {imageFiles.map((file) => (
                   <div key={file.key} className="group relative">
                     <div className="aspect-square rounded-md overflow-hidden bg-gray-100">
+                      {/* Usar el componente Image de Next.js con crossOrigin */}
                       <img
                         src={file.url || "/placeholder.svg"}
                         alt={file.fileName}
                         className="object-cover w-full h-full"
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          // Mostrar un mensaje de error si la imagen no se puede cargar
+                          console.error("Error loading image:", file.url)
+                          // Establecer una imagen de respaldo
+                          e.currentTarget.src = "/placeholder.svg?height=200&width=200"
+                        }}
                       />
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleDelete(file.key)}
-                        disabled={deleting === file.key}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="secondary" size="icon" onClick={() => window.open(file.url, "_blank")}>
+                          <Image className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleDelete(file.key)}
+                          disabled={deleting === file.key}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="mt-1 text-xs truncate">{file.fileName}</div>
                   </div>

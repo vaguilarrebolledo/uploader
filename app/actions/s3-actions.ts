@@ -1,6 +1,6 @@
 "use server"
 
-import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from "@aws-sdk/client-s3"
+import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { revalidatePath } from "next/cache"
 import * as crypto from "crypto"
@@ -64,16 +64,25 @@ export async function listFiles() {
 
     const response = await s3Client.send(command)
 
-    const files =
-      response.Contents?.map((item) => {
-        const key = item.Key || ""
-        const category = key.split("/")[0]
-        const fileName = key.split("/").pop() || ""
-        const lastModified = item.LastModified
-        const size = item.Size
+    // Función para generar URL firmada
+    const generateSignedUrl = async (key: any) => {
+      const command = new GetObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+      });
+      return await getSignedUrl(s3Client, command, { expiresIn: 900 }); // 15 minutos de validez
+    };
 
-        // Generate a URL for viewing the file
-        const fileUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`
+    const files = await Promise.all(
+      (response.Contents || []).map(async (item) => {
+        const key = item.Key || "";
+        const category = key.split("/")[0];
+        const fileName = key.split("/").pop() || "";
+        const lastModified = item.LastModified;
+        const size = item.Size;
+
+        // Genera URL firmada para cada archivo
+        const signedUrl = await generateSignedUrl(key);
 
         return {
           key,
@@ -81,9 +90,10 @@ export async function listFiles() {
           category,
           lastModified,
           size,
-          url: fileUrl,
-        }
-      }) || []
+          url: signedUrl, // Ahora es una URL temporal
+        };
+      })
+    );
 
     return {
       success: true,
